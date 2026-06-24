@@ -5,6 +5,7 @@
   "main_agent": "MultiRotor",
   "ticks_per_sec": 30,
   "frames_per_sec": true,
+  "ros_publish": true,
   "env_min": [-5000.0, -5000.0, -10.0],
   "env_max": [5000.0, 5000.0, 120.0],
   "octree_min": 0.02,

@@ -75,7 +75,7 @@ class HolooceanInterface():
         )
         self.agent = self.env.agents[scenario["main_agent"]]
         self.sensors = self.agent.sensors
-        self.ros_publish = scenario["ros_publish"]
+        self.ros_publish = scenario.get("ros_publish", True)
 
         # Initial step to populate state.
         command = np.zeros(6) if 'fixedwing' in str(scenario_path) else np.zeros(4)
