@@ -2,6 +2,7 @@ import numpy as np
 from pathlib import Path
 import holoocean
 import json
+import subprocess
 
 
 class HolooceanInterface():
@@ -9,13 +10,21 @@ class HolooceanInterface():
     Lightweight wrapper around holoocean for loading a scenario file and advancing the simulation,
     returning sensor data.
     """
-    def __init__(self, scenario_path, tps=30, show_viewport=True, render_quality=None):
+    def __init__(
+        self,
+        scenario_path,
+        tps=30,
+        show_viewport=True,
+        render_quality=None,
+        disable_screen_messages=False,
+    ):
         """
         Parameters:
             scenario_path (str or Path): Path to the scenario file
             tps (int): ticks per second for the simulation
             show_viewport (bool): Whether to show the simulation viewport
             render_quality (int or None): Render quality setting for the simulation
+            disable_screen_messages (bool): Whether to ask Unreal to hide on-screen messages
         
         Attributes:
             env: The holoocean environment instance
@@ -59,7 +68,11 @@ class HolooceanInterface():
         scenario["agents"][0]["sensors"].extend(collision_sensors)
 
         # Create environment using ticks_per_sec parameter.
-        self.env = holoocean.make(scenario_cfg=scenario, show_viewport=show_viewport, ticks_per_sec=self.tps)
+        self.env = self._make_environment(
+            scenario,
+            show_viewport=show_viewport,
+            disable_screen_messages=disable_screen_messages,
+        )
         self.agent = self.env.agents[scenario["main_agent"]]
         self.sensors = self.agent.sensors
         self.ros_publish = scenario["ros_publish"]
@@ -68,6 +81,37 @@ class HolooceanInterface():
         command = np.zeros(6) if 'fixedwing' in str(scenario_path) else np.zeros(4)
         self.state = self.env.step(command)
         self.render_quality = render_quality
+
+    def _make_environment(self, scenario, show_viewport=True, disable_screen_messages=False):
+        if not disable_screen_messages:
+            return holoocean.make(
+                scenario_cfg=scenario,
+                show_viewport=show_viewport,
+                ticks_per_sec=self.tps,
+            )
+
+        original_popen = subprocess.Popen
+
+        def patched_popen(*popen_args, **popen_kwargs):
+            args = popen_args[0] if popen_args else popen_kwargs.get("args")
+            if isinstance(args, list) and "-HolodeckOn" in args:
+                if "-ExecCmds=DisableAllScreenMessages" not in args:
+                    args = [*args, "-ExecCmds=DisableAllScreenMessages"]
+                    if popen_args:
+                        popen_args = (args,) + popen_args[1:]
+                    else:
+                        popen_kwargs["args"] = args
+            return original_popen(*popen_args, **popen_kwargs)
+
+        subprocess.Popen = patched_popen
+        try:
+            return holoocean.make(
+                scenario_cfg=scenario,
+                show_viewport=show_viewport,
+                ticks_per_sec=self.tps,
+            )
+        finally:
+            subprocess.Popen = original_popen
 
     def set_render_quality(self, value=None):
         """

@@ -62,9 +62,18 @@ class HoloOceanNode(Node):
         render_quality = self.get_parameter('render_quality').get_parameter_value().integer_value
         if render_quality == -1:
             render_quality = None
+        self.declare_parameter('disable_screen_messages', 'auto')
+        disable_screen_messages_param = self.get_parameter('disable_screen_messages').get_parameter_value().string_value
+        disable_screen_messages = self._resolve_disable_screen_messages(disable_screen_messages_param)
 
         # Initialize Holoocean interface.
-        self.interface = HolooceanInterface(scenario_path, tps=30, show_viewport=show_viewport, render_quality=render_quality)
+        self.interface = HolooceanInterface(
+            scenario_path,
+            tps=30,
+            show_viewport=show_viewport,
+            render_quality=render_quality,
+            disable_screen_messages=disable_screen_messages,
+        )
         self.get_logger().info('Holoocean interface initialized.')
 
         # Create services.
@@ -83,6 +92,18 @@ class HoloOceanNode(Node):
         self.tick_thread.start()
 
         self.get_logger().info('HoloOcean simulation thread started.')
+
+    def _resolve_disable_screen_messages(self, value):
+        value = str(value).strip().lower()
+        if value in ('auto', ''):
+            return self.env == 'businesscampus'
+        if value in ('true', '1', 'yes', 'on'):
+            return True
+        if value in ('false', '0', 'no', 'off'):
+            return False
+        raise ValueError(
+            "disable_screen_messages must be one of: auto, true, false"
+        )
 
     def sim_loop(self):
         """
@@ -290,4 +311,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-

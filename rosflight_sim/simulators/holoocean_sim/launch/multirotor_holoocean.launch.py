@@ -25,6 +25,21 @@ def generate_launch_description():
     )
     use_sim_time = LaunchConfiguration('use_sim_time')
 
+    env_arg = DeclareLaunchArgument(
+        'env',
+        default_value='default',
+        description='Name of the environment to load in HoloOcean',
+        choices=['default', 'desert', 'forest', 'island', 'mountains', 'businesscampus']
+    )
+    env = LaunchConfiguration('env')
+    disable_screen_messages_arg = DeclareLaunchArgument(
+        'disable_screen_messages',
+        default_value='auto',
+        description='Whether to disable Unreal on-screen messages: auto, true, or false',
+        choices=['auto', 'true', 'false']
+    )
+    disable_screen_messages = LaunchConfiguration('disable_screen_messages')
+
     ##########
     # Launch #
     ##########
@@ -38,7 +53,9 @@ def generate_launch_description():
             )
         ]),
         launch_arguments={
-            'agent': 'multirotor'
+            'agent': 'multirotor',
+            'env': env,
+            'disable_screen_messages': disable_screen_messages,
         }.items()
     )
 
@@ -80,6 +97,8 @@ def generate_launch_description():
     return LaunchDescription(
         [
             use_sim_time_arg,
+            env_arg,
+            disable_screen_messages_arg,
             simulator_launch_include,
             common_nodes_include,
             mr_forces_moments_node,
